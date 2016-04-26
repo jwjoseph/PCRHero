@@ -10,7 +10,10 @@
 	</div>
 	<div id="image-display">
 		%for image in images:
+		<div id = "image-group">
 		<div id="image-name">{{image}}</div><img src={{'http://www.pcrhero.org:8000/images/' + image}} />
+		</div>
+		%end
 	</div>
 </div>
 </form>

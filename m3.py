@@ -6,6 +6,7 @@ import json
 import bson.json_util
 import requests
 import time
+import datetime
 
 class PCRUser:
     def __init__(self, email, name, hashword):
@@ -77,6 +78,73 @@ class OpenBadge:
         """add the badge to the database"""
         db.badges.insert(self.output())
 
+
+class Task:
+    """base class for tasks"""
+    def __init__(self, user, badge, app):
+        self.user = user
+        self.badge = badge
+        self.app = app
+
+class PercentTask(Task):
+    def __init__(self, user, badge, app, circuit, score, percent):
+        super().__init__(user, badge, app)
+        self.type = "percent"
+        self.circuit = circuit
+        self.score = score
+        self.percent = percent
+        self.newscore = score * (percent / 100.0) ## this is the improved target score
+
+    def output(self):
+        """returns output as a dict - exactly as we'll need for mongodb...
+        returns useremail, badgename, app, type, circuit, initial score, target score"""
+        data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "score": self.score, "newscore": self.newscore}
+        return data
+
+class RepeatTask(Task):
+    def __init__(self, user, badge, app, circuit, repeat):
+        super().__init__(user, badge, app)
+        self.type = "repeat"
+        self.circuit = circuit
+        self.repeat = repeat
+        self.repeatCount = 0 ## the number of times it has been repeated...
+
+        def output(self):
+        """returns output as a dict - exactly as we'll need for mongodb..."""
+        data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "score": self.score, "count": self.repeatCount}
+        return data
+
+class UniqueTask(Task):
+    def __init__(self, user, badge, app, unique):
+        super().__init__(user, badge, app)
+        self.type = "unique"
+        self.uniqueGoal = unique  ## needed number of unique submissions 
+        self.uniqueList = []  ## list of submissions
+
+    def output(self):
+        """returns output as a dict - exactly as we'll need for mongodb..."""
+        data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "uniqueGoal": self.uniqueGoal, "uniqueList": self.uniqueList}
+        return data
+
+class TimeTrialTask(Task):
+    def __init__(self, user, badge, app, days, hours, minutes, circuit, tasknum):
+        super().__init__(user, badge, app)
+        self.type = "timetrial"
+        self.circuit = circuit
+        self.tasknumGoal = tasknum
+        self.tasksDone = 0
+        self.days = days
+        self.hours = hours
+        self.minutes = minutes
+        now = datetime.datetime.now()
+        setTime = now + datetime.timedelta(days = self.days, hours=self.hours, minutes=self.minutes)
+        self.duedate = setTime
+
+    def output(self):
+        """returns output as a dict - exactly as we'll need for mongodb..."""
+        data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "tasknumGoal": self.tasknumGoal, "tasksDone": self.tasksDone}
+        return data
+
 def award_badge_to_user(db, badgename, username, hostdir="/home/ubuntu/pythonproject/awardedbadges/"):
     """awards a badge to a recipient, creating a publicly hosted json of the badge info (a badge assertion)
     located at "http://www.pcrhero.org:8000/awardedbadges/"
@@ -103,6 +171,18 @@ def award_badge_to_user(db, badgename, username, hostdir="/home/ubuntu/pythonpro
     # get the stored JSON data from the badge file, store it in a dict
     
     db.users.update_one(entry, {"$push":{"badges": badgedict}})
+
+
+## badge bake utility
+
+## Task Name
+## Badge to assign
+## User
+## Task type
+    # percent
+        # unique circuit or such
+
+## Due Date
 
 
 def sanitize(username):
@@ -189,8 +269,35 @@ def menu(db):
 def get_users_badges(db, email):
     '''obtains badge info from a user's profile - returns an array of arrays'''
     entry = {"email": email}
-    badges = db.users.find_one(entry, {"badges":1}) # this is a 'mask' for the return
-    return badges['badges']
+    badges = db.users.find_one(entry, {"badges":1}) # this is a 'mask' for the return 
+    try:
+        return badges['badges']
+    except KeyError:
+        badges = []
+        return badges
+
+def get_users_apps(db, email):
+    '''obtains app info from a user's profile - returns an array of arrays'''
+    entry = {"email": email}
+    apps = db.users.find_one(entry, {"apps":1}) # this is a 'mask' for the return
+    try:
+        return apps['apps'] ## this is an array of app names
+    except KeyError:
+        apps = []
+        return apps 
+
+def get_app(db, appname):
+    '''obtains an app from the list'''
+    entry = {"name": appname}
+    return db.apps.find_one(entry)
+
+def get_all_apps(db):
+    '''returns a list of all app names in the database'''
+    apps = db.apps.find()
+    applist = []
+    for app in apps:
+        applist.append(app['name'])
+    return applist
 
 def add_issuer(db, issuerObject):
     '''adds an issuer to the library of issuers'''

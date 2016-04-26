@@ -143,15 +143,18 @@ def show_name():
 '''.format(request.POST.name)
 
 @get('/myprofile')
-def home():
+def profile():
     if(request.get_cookie('loggedin')):
         useremail = request.get_cookie('loggedin', secret='applesauce')
         userbadges = m3.get_users_badges(pcrDB, useremail)
-        for badge in userbadges:
-            print(badge)
+        userapps = m3.get_users_apps(pcrDB, useremail)
+        applist = {}
+        for appname in userapps:
+            applist[appname] = (m3.get_app(pcrDB, appname))
+
         return template('base.tpl', title='PCR Hero', email= useremail) + '''\
             <h1>Welcome to PCR Hero - {}</h1>
-        '''.format(useremail) + template('profile.tpl', badges=userbadges) + "</body>"
+        '''.format(useremail) + template('profile.tpl', badges=userbadges, apps=applist) + "</body>"
     else:
         redirect("/login")
 
@@ -183,8 +186,6 @@ def show_name():
     else:
         ### need to load up the user's hashword for comparison purposes
         loginHashword = m3.get_user_hashword(pcrDB, email)
-        print(hashword)
-        print(loginHashword)
         if(hashword != loginHashword):
             return template('base.tpl', title='PCR Hero', email=request.get_cookie('loggedin', secret='applesauce')) + "Sorry - your password is incorrect!"
         elif(hashword == loginHashword):
@@ -259,7 +260,7 @@ def issuer_create_menu():
 def issuer_create_submit():
     name = request.params.name
     description = request.params.description
-    url = request.params.description
+    url = request.params.url
     if(request.get_cookie('loggedin')):
         useremail = request.get_cookie('loggedin', secret='applesauce')
         userbadges = m3.get_users_badges(pcrDB, useremail)
@@ -339,6 +340,8 @@ def upload_image():
     if(request.get_cookie('loggedin')):
         useremail = request.get_cookie('loggedin', secret='applesauce')
         userbadges = m3.get_users_badges(pcrDB, useremail)
+        image_path = "/home/ubuntu/pythonproject/images"
+        available_images = os.listdir(image_path)
 
         upload = request.files.image
         name, ext = os.path.splitext(upload.filename)
@@ -350,13 +353,78 @@ def upload_image():
         file_path = "{path}/{file}".format(path=save_path, file=upload.filename)
         upload.save(file_path)
 
+
         return template('base.tpl', title='PCR Hero', email= useremail) + '''\
             <h1>Welcome to PCR Hero's Admin Menu - {}</h1>
             <h2 style="color:blue">Image successfully uploaded!</h2>
-        '''.format(useremail) + template('admin-images.tpl', badges=userbadges) + "</body>"
+        '''.format(useremail) + template('admin-images.tpl', badges=userbadges, images=available_images, image_path=image_path) + "</body>"
     else:
         redirect("/login")
 
+
+@get('/admin-tasks')
+def tasks_menu():
+    if(request.get_cookie('loggedin')):
+        useremail = request.get_cookie('loggedin', secret='applesauce')
+        badge_list = m3.get_badges(pcrDB)
+        user_list = m3.get_users(pcrDB)
+        return template('base.tpl', title='PCR Hero', email= useremail) + '''\
+            <h1>Welcome to PCR Hero's Admin Menu - {}</h1>
+        '''.format(useremail) + template('admin-tasks.tpl', badges=badge_list, users=user_list, typeselection = 0) + "</body>"
+    else:
+        redirect("/login")
+
+@post('/admin-tasks')
+def tasks_menu_post():
+    if(request.get_cookie('loggedin')):
+        submitted = request.params.flag
+        typeselection = request.params.typeselection
+        badge_list = m3.get_badges(pcrDB)
+        user_list = m3.get_users(pcrDB)
+        app_list = m3.get_all_apps(pcrDB)
+        useremail = request.get_cookie('loggedin', secret='applesauce')
+        if(submitted == "False"):
+            if(typeselection != 0):
+                app = request.params.app
+            return template('base.tpl', title='PCR Hero', email= useremail) + '''\
+                <h1>Welcome to PCR Hero's Admin Menu - {}</h1>
+            '''.format(useremail) + template('admin-tasks.tpl', badges=badge_list, users=user_list, app_list=app_list, typeselection = typeselection, app = app) + "</body>"
+        else:
+            user = request.params.user
+            badge = request.params.badge
+            app = request.params.app
+            ### type handling for task assignment:
+            if(typeselection == "percent"):
+                circuit = request.params.circuit
+                score = request.params.score
+                percent = request.params.percent
+
+            elif(typeselection == "repeat"):
+                circuit = request.params.circuit
+                repeat = request.params.repeat
+
+            elif(typeselection == "unique"):
+                unique = request.params.unique
+
+            elif(typeselection == "time trial"):
+                days = request.params.days
+                hours = request.params.hours
+                minutes = request.params.minutes
+                circuit = request.params.circuit
+                tasknum = request.params.tasknum
+
+
+            else: #performance
+                circuit = request.params.circuit
+                targetyield = request.params.targetyield
+                cost = request.params.cost
+
+            return template('base.tpl', title='PCR Hero', email= useremail) + '''\
+            <h1>Welcome to PCR Hero's Admin Menu - {}</h1>
+            <h2 style="color:blue;">Task successfully started...</h2>
+        '''.format(useremail) + template('admin-tasks.tpl', badges=badge_list, users=user_list, typeselection = 0) + "</body>"
+    else:
+        redirect("/login")
 
 @get('/logout')
 def logout():

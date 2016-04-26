@@ -97,7 +97,9 @@ nav li{
 .images-wrapper div{float: left; width:50%; word-wrap: break-word; position: relative; z-index:1;}
 .images-wrapper #image-display { background-color: #2D83C3; border-radius:10px;}
 .images-wrapper #image-display #image-name {color: white; font-family: Futura, Tahoma, sans-serif; padding:5px;}
-.images-wrapper #image-display img{height:10%; width:10%;}
+.images-wrapper #image-display img{height:200px; width:200px;}
+.images-wrapper #image-group {width: 100%; display: block; clear: both; border: 1px solid #276ea5; border-radius: 5px; margin-bottom: 2px; border-radius:5px}
+
 
 /*.issuer-menu {width: 100%; word-wrap: break-word; position: relative; z-index:1;}*/
 .issuer-menu div {float: left; width:50%; word-wrap: break-word; position: relative; z-index:1;}
