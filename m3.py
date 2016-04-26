@@ -107,12 +107,12 @@ class PercentTask(Task):
         self.circuit = circuit
         self.score = score
         self.percent = percent
-        self.newscore = score * (percent / 100.0) ## this is the improved target score
+        self.goalScore = score * (percent / 100.0) ## this is the improved target score
 
     def output(self):
         """returns output as a dict - exactly as we'll need for mongodb...
         returns useremail, badgename, app, type, circuit, initial score, target score"""
-        data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "score": self.score, "newscore": self.newscore}
+        data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "score": self.score, "goalScore": self.goalScore}
         return data
 
 class RepeatTask(Task):
@@ -120,12 +120,12 @@ class RepeatTask(Task):
         super().__init__(user, badge, app)
         self.type = "repeat"
         self.circuit = circuit
-        self.repeat = repeat
+        self.repeatTarget = repeat
         self.repeatCount = 0 ## the number of times it has been repeated...
 
     def output(self):
         """returns output as a dict - exactly as we'll need for mongodb..."""
-        data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "score": self.score, "count": self.repeatCount}
+        data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "repeatTarget": self.repeatTarget, "count": self.repeatCount}
         return data
 
 class UniqueTask(Task):
@@ -212,6 +212,10 @@ def find_task_by_id(db, id):
 def increment_task_by_id(db, id, field):
     entry = {'_id': ObjectId(id)}
     db.tasks.update_one(entry, {'$inc': {field: 1}})
+
+def update_task_by_id(db, id, field, score):
+    entry = {'_id': ObjectId(id)}
+    db.tasks.update_one(entry, {'$set': {field: score}})
 
 def remove_task_by_id(db, id):
     entry = {'_id': ObjectId(id)}

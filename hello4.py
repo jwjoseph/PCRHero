@@ -460,42 +460,66 @@ def submit():
     print('Check for timetrials...')
     for task in taskarray:
         if(task['type'] == 'timetrial'):
-            if(task['circuit'] == submittedcircuit):
-                m3.increment_task_by_id(pcrDB, task['_id'], "tasksDone")
-
-            ## check if criteria met...
-            if(task['tasksDone'] >= task['tasknumGoal']):
-                m3.award_badge_to_user(pcrDB, task['badge'], task['user'])
-                print("A new badge was awarded to %s!" % task['user'])
+            if(m3.check_task_datetime(pcrDB, task)):
+                ## check_task_datetime returns True if time's up
+                print("%s's time is up!" % task['badge'])
                 m3.remove_task_by_id(pcrDB, task['_id']) ## delete task now that badge has been awarded
-                taskarray.remove(task)
+                taskarray.remove(task) ## remove from taskarray
                 print("Task removed...")
-            # delete trial
-            # remove trial from taskarray
 
     # # Step 2 - evaluate badges and award them if completed
     # ### Step 3 - evaluate for tasks that need unique submissions or multiple tasks (unique, repeat, timetrial)
-    # for task in taskarray:
-    #     if(task['type'] == 'unique'):
-    #         pass
+    for task in taskarray:
+        if(task['type'] == 'unique'):
+            pass ## Working on incorporating this one...
 
-    #     elif(task['type'] == 'repeat'):
-    #         pass
+        elif(task['type'] == 'repeat'):
+            if(task['circuit'] == submittedcircuit):
+                m3.increment_task_by_id(pcrDB, task['_id'], "count")
+                ## check if criteria met...
+                if(task['count'] >= task['repeatTarget']):
+                    m3.award_badge_to_user(pcrDB, task['badge'], task['user'])
+                    print("A new badge was awarded to %s!" % task['user'])
+                    m3.remove_task_by_id(pcrDB, task['_id']) ## delete task now that badge has been awarded
+                    taskarray.remove(task) ## remove from taskarray
+                    print("Task removed...")
 
-    #     elif(task['type'] == 'timetrial'):
-    #         if(task['circuit'] == submittedcircuit):
-    #             ## increment the task using $inc
+        elif(task['type'] == 'timetrial'):
+            if(task['circuit'] == submittedcircuit):
+                m3.increment_task_by_id(pcrDB, task['_id'], "tasksDone")
 
-    # ### Step 4 - compare percentage scores
+                ## check if criteria met...
+                if(task['tasksDone'] >= task['tasknumGoal']):
+                    m3.award_badge_to_user(pcrDB, task['badge'], task['user'])
+                    print("A new badge was awarded to %s!" % task['user'])
+                    m3.remove_task_by_id(pcrDB, task['_id']) ## delete task now that badge has been awarded
+                    taskarray.remove(task) ## remove from taskarray
+                    print("Task removed...")
 
-    #     elif(task['type'] == 'percent'):
-    #         pass
-    # ### Step 5 - check cost/performance scores
-    #     elif(task['type'] == 'performance'):
-    #         pass
+    ### Step 4 - compare percentage scores
 
-    #     else:
-    #         pass
+        elif(task['type'] == 'percent'):
+            if(task['circuit'] == submittedcircuit):
+                newScore = reqeust.params.score
+                ## check if criteria met...
+                if(newScore >= task['goalScore']):
+                    m3.award_badge_to_user(pcrDB, task['badge'], task['user'])
+                    print("A new badge was awarded to %s!" % task['user'])
+                    m3.remove_task_by_id(pcrDB, task['_id']) ## delete task now that badge has been awarded
+                    taskarray.remove(task) ## remove from taskarray
+                    print("Task removed...")
+
+                ## else, check if this is an improvement
+                if(newScore >= task['score']):
+                    m3.update_task_by_id(pcrDB, task['_id'], "score", newScore)
+                    print("Score improved! Getting closer!")
+
+    ### Step 5 - check cost/performance scores
+        elif(task['type'] == 'performance'):
+            pass
+
+        else:
+            pass
 
 @get('/logout')
 def logout():
