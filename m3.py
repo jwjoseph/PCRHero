@@ -1,6 +1,7 @@
-# m.py
+# m3.py
 
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 import hashlib
 import json
 import bson.json_util
@@ -92,7 +93,7 @@ class Task:
     def assign(self, db):
         """checks for duplicates, returns false if duplicate, if not, logs the task and returns true"""
         ## check for duplicates
-        if(check_for_task(db, self.badge, self.user) != None):
+        if(check_for_task(db, self.badge, self.user, self.app) != None):
             return False
         ## if not, assign away...
         else:
@@ -155,7 +156,7 @@ class TimeTrialTask(Task):
 
     def output(self):
         """returns output as a dict - exactly as we'll need for mongodb..."""
-        data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "tasknumGoal": self.tasknumGoal, "tasksDone": self.tasksDone}
+        data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "tasknumGoal": self.tasknumGoal, "tasksDone": self.tasksDone, "duedate" : self.duedate}
         return data
 
 class PerformanceTask(Task):
@@ -201,8 +202,34 @@ def award_badge_to_user(db, badgename, username, hostdir="/home/ubuntu/pythonpro
     db.users.update_one(entry, {"$push":{"badges": badgedict}})
 
 
-def check_for_task(db, badgename, username):
-    return db.tasks.find_one({"user": username, "badge": badgename})
+def check_for_task(db, badgename, username, appname):
+    return db.tasks.find_one({"user": username, "badge": badgename, "app": appname})
+
+def find_task_by_id(db, id):
+    entry = {'_id': ObjectId(id)}
+    return db.tasks.find_one(entry)
+
+def increment_task_by_id(db, id, field):
+    entry = {'_id': ObjectId(id)}
+    db.tasks.update_one(entry, {'$inc': {field: 1}})
+
+def remove_task_by_id(db, id):
+    entry = {'_id': ObjectId(id)}
+    db.tasks.delete_one(entry)
+
+def get_users_tasks(db, username):
+    return db.tasks.find({"user": username})
+
+def get_users_tasks_for_app(db, username, appname):
+    return db.tasks.find({"user": username, "app": appname})
+
+def check_task_datetime(db, task):
+    '''checks the task's due date - returns true if time is up!'''
+    now = datetime.datetime.now()
+    if(task['duedate'] < now):
+        return True
+    else:
+        return False
 
 ## badge bake utility
 

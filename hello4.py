@@ -393,6 +393,7 @@ def tasks_menu_post():
             user = request.params.user
             badge = request.params.badge
             app = request.params.app
+            print("typeselection = %s " % typeselection)
             ### type handling for task assignment:
             if(typeselection == "percent"):
                 circuit = request.params.circuit
@@ -402,28 +403,29 @@ def tasks_menu_post():
 
             elif(typeselection == "repeat"):
                 circuit = request.params.circuit
-                repeat = request.params.repeat
+                repeat = int(request.params.repeat)
                 NewTask = m3.RepeatTask(user, badge, app, circuit, repeat)
 
             elif(typeselection == "unique"):
                 unique = request.params.unique
                 NewTask = m3.UniqueTask(user, badge, app, unique)
 
-            elif(typeselection == "time trial"):
-                days = request.params.days
-                hours = request.params.hours
-                minutes = request.params.minutes
+            elif(typeselection == "timetrial"):
+                days = int(request.params.days)
+                hours = int(request.params.hours)
+                minutes = int(request.params.minutes)
                 circuit = request.params.circuit
-                tasknum = request.params.tasknum
+                tasknum = int(request.params.tasknum)
                 NewTask = m3.TimeTrialTask(user, badge, app, days, hours, minutes, circuit, tasknum)
 
             else: #performance
                 circuit = request.params.circuit
-                targetyield = request.params.targetyield
-                cost = request.params.cost
+                targetyield = int(request.params.targetyield)
+                cost = int(request.params.cost)
                 NewTask = m3.PerformanceTask(user, badge, app, circuit, targetyield, cost)
 
             ### task is assigned, now time to see if it's unique...
+            print(NewTask.output())
             result = NewTask.assign(pcrDB)
 
             if(result):
@@ -438,6 +440,62 @@ def tasks_menu_post():
                 '''.format(useremail) + template('admin-tasks.tpl', badges=badge_list, users=user_list, typeselection = 0) + "</body>"
     else:
         redirect("/login")
+
+@post('/submit')
+def submit():
+    username = request.params.user
+    appname = request.params.app
+    submittedcircuit = request.params.circuit
+    tasks = m3.get_users_tasks_for_app(pcrDB, username, appname)
+    taskarray = []
+    for task in tasks:
+        taskarray.append(task)
+    print('TaskList----')
+    for task in taskarray:
+        print(task)
+
+    print('\n')
+
+    # Step 1 - evaluate for tasks that have expired and remove them (time trials)
+    print('Check for timetrials...')
+    for task in taskarray:
+        if(task['type'] == 'timetrial'):
+            if(task['circuit'] == submittedcircuit):
+                m3.increment_task_by_id(pcrDB, task['_id'], "tasksDone")
+
+            ## check if criteria met...
+            if(task['tasksDone'] >= task['tasknumGoal']):
+                m3.award_badge_to_user(pcrDB, task['badge'], task['user'])
+                print("A new badge was awarded to %s!" % task['user'])
+                m3.remove_task_by_id(pcrDB, task['_id']) ## delete task now that badge has been awarded
+                taskarray.remove(task)
+                print("Task removed...")
+            # delete trial
+            # remove trial from taskarray
+
+    # # Step 2 - evaluate badges and award them if completed
+    # ### Step 3 - evaluate for tasks that need unique submissions or multiple tasks (unique, repeat, timetrial)
+    # for task in taskarray:
+    #     if(task['type'] == 'unique'):
+    #         pass
+
+    #     elif(task['type'] == 'repeat'):
+    #         pass
+
+    #     elif(task['type'] == 'timetrial'):
+    #         if(task['circuit'] == submittedcircuit):
+    #             ## increment the task using $inc
+
+    # ### Step 4 - compare percentage scores
+
+    #     elif(task['type'] == 'percent'):
+    #         pass
+    # ### Step 5 - check cost/performance scores
+    #     elif(task['type'] == 'performance'):
+    #         pass
+
+    #     else:
+    #         pass
 
 @get('/logout')
 def logout():
