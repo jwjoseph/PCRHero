@@ -396,15 +396,18 @@ def tasks_menu_post():
             ### type handling for task assignment:
             if(typeselection == "percent"):
                 circuit = request.params.circuit
-                score = request.params.score
-                percent = request.params.percent
+                score = float(request.params.score)
+                percent = int(request.params.percent)
+                NewTask = m3.PercentTask(user, badge, app, circuit, score, percent)
 
             elif(typeselection == "repeat"):
                 circuit = request.params.circuit
                 repeat = request.params.repeat
+                NewTask = m3.RepeatTask(user, badge, app, circuit, repeat)
 
             elif(typeselection == "unique"):
                 unique = request.params.unique
+                NewTask = m3.UniqueTask(user, badge, app, unique)
 
             elif(typeselection == "time trial"):
                 days = request.params.days
@@ -412,17 +415,27 @@ def tasks_menu_post():
                 minutes = request.params.minutes
                 circuit = request.params.circuit
                 tasknum = request.params.tasknum
-
+                NewTask = m3.TimeTrialTask(user, badge, app, days, hours, minutes, circuit, tasknum)
 
             else: #performance
                 circuit = request.params.circuit
                 targetyield = request.params.targetyield
                 cost = request.params.cost
+                NewTask = m3.PerformanceTask(user, badge, app, circuit, targetyield, cost)
 
-            return template('base.tpl', title='PCR Hero', email= useremail) + '''\
-            <h1>Welcome to PCR Hero's Admin Menu - {}</h1>
-            <h2 style="color:blue;">Task successfully started...</h2>
-        '''.format(useremail) + template('admin-tasks.tpl', badges=badge_list, users=user_list, typeselection = 0) + "</body>"
+            ### task is assigned, now time to see if it's unique...
+            result = NewTask.assign(pcrDB)
+
+            if(result):
+                return template('base.tpl', title='PCR Hero', email= useremail) + '''\
+                <h1>Welcome to PCR Hero's Admin Menu - {}</h1>
+                <h2 style="color:blue;">Task successfully started...</h2>
+            '''.format(useremail) + template('admin-tasks.tpl', badges=badge_list, users=user_list, typeselection = 0) + "</body>"
+            else:
+                return template('base.tpl', title='PCR Hero', email= useremail) + '''\
+                    <h1>Welcome to PCR Hero's Admin Menu - {}</h1>
+                    <h2 style="color:red;">Task already assigned to user...</h2>
+                '''.format(useremail) + template('admin-tasks.tpl', badges=badge_list, users=user_list, typeselection = 0) + "</body>"
     else:
         redirect("/login")
 

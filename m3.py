@@ -86,6 +86,19 @@ class Task:
         self.badge = badge
         self.app = app
 
+    def output(self):
+        pass
+
+    def assign(self, db):
+        """checks for duplicates, returns false if duplicate, if not, logs the task and returns true"""
+        ## check for duplicates
+        if(check_for_task(db, self.badge, self.user) != None):
+            return False
+        ## if not, assign away...
+        else:
+            db.tasks.insert(self.output())
+            return True
+
 class PercentTask(Task):
     def __init__(self, user, badge, app, circuit, score, percent):
         super().__init__(user, badge, app)
@@ -109,7 +122,7 @@ class RepeatTask(Task):
         self.repeat = repeat
         self.repeatCount = 0 ## the number of times it has been repeated...
 
-        def output(self):
+    def output(self):
         """returns output as a dict - exactly as we'll need for mongodb..."""
         data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "score": self.score, "count": self.repeatCount}
         return data
@@ -145,6 +158,21 @@ class TimeTrialTask(Task):
         data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "tasknumGoal": self.tasknumGoal, "tasksDone": self.tasksDone}
         return data
 
+class PerformanceTask(Task):
+    def __init__(self, user, badge, app, circuit, targetyield, cost):
+        super().__init__(user, badge, app)
+        self.type = "performance"
+        self.circuit = circuit
+        self.targetyield = targetyield
+        self.cost = cost ## the cost that one needs to stay below...
+
+    def output(self):
+        """returns output as a dict - exactly as we'll need for mongodb..."""
+        data = {"user": self.user, "badge": self.badge, "app": self.app, "type": self.type, "circuit": self.circuit, "targetyield": self.targetyield, "cost": self.cost}
+        return data
+
+
+
 def award_badge_to_user(db, badgename, username, hostdir="/home/ubuntu/pythonproject/awardedbadges/"):
     """awards a badge to a recipient, creating a publicly hosted json of the badge info (a badge assertion)
     located at "http://www.pcrhero.org:8000/awardedbadges/"
@@ -172,6 +200,9 @@ def award_badge_to_user(db, badgename, username, hostdir="/home/ubuntu/pythonpro
     
     db.users.update_one(entry, {"$push":{"badges": badgedict}})
 
+
+def check_for_task(db, badgename, username):
+    return db.tasks.find_one({"user": username, "badge": badgename})
 
 ## badge bake utility
 
