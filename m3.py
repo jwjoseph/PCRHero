@@ -1,4 +1,9 @@
 # m3.py
+###########################################################################################
+# Author: Josh Joseph joshmd@bu.edu
+# 4/29/16
+# This is the main function library file for PCR hero....
+
 
 from pymongo import MongoClient
 from bson.objectid import ObjectId
@@ -9,7 +14,10 @@ import requests
 import time
 import datetime
 
+HOSTIP = 'http://www.pcrhero.org:8000/'
+
 class PCRUser:
+    '''This is a convenience class which verifies that entries to the users collection are valid'''
     def __init__(self, email, name, hashword):
         self.email = email
         self.name = name
@@ -19,6 +27,7 @@ class PCRUser:
         return {"email" : self.email, "name" : self.name, "hashword" : self.hashword}
 
 class PCRIssuer:
+    '''This is a convenience class which verifies that entries to the issuers collection are valid'''
     def __init__(self, name, description, url):
         self.name = name
         self.description = description
@@ -51,10 +60,10 @@ class OpenBadge:
         self.name = name
         ## need sanitizing function here for name - sub for space
         self.description = description
-        self.image = "http://www.pcrhero.org:8000/images/" + image
+        self.image = HOSTIP + "images/" + image
         self.criteria = establish_criteria(name, criteria)
         self.tags = tags.split()
-        self.issuer = "http://www.pcrhero.org:8000/issuers/" + issuer + ".json"
+        self.issuer = HOSTIP + "issuers/" + issuer + ".json"
         ## need sanitizing function here for issuer - sub for space 
 
     def jsonize(self):
@@ -81,7 +90,8 @@ class OpenBadge:
 
 
 class Task:
-    """base class for tasks"""
+    """base class for tasks
+        tasks are instantiated by the admin-tasks menu, which also assigns them"""
     def __init__(self, user, badge, app):
         self.user = user
         self.badge = badge
@@ -201,6 +211,36 @@ def award_badge_to_user(db, badgename, username, hostdir="/home/ubuntu/pythonpro
     
     db.users.update_one(entry, {"$push":{"badges": badgedict}})
 
+################################################################################################################
+# Badge Baking Function - use with caution
+# This sends the badge info to the Mozilla Badge Baking API. The issue with this is that you need somewhere to
+# actually put it - unless the mozilla badge display API is also added to the site (needs node.js)
+# then it only shows the png, rather than any of the metadata.
+# one option would be to email it to users, or to simply host it at a specific location and add a download link.
+################################################################################################################
+
+def bake(badge, username, filename, hostname="http://www.pcrhero.org/badges/"):
+    """Uses the existing Mozilla Badge Baking Web API to create a png with baked-in data
+    badgename is a json, host is a url leading to the badge directory, filename is the output png (needs a path!)"""
+    email = username
+    username = sanitize(username)
+    uid = username + badgename
+    hostedURL = "http://www.pcrhero.org/awardedbadges/" + uid + ".json"
+    print("Badge hosted at " + hostedURL)
+    getURL = "http://backpack.openbadges.org/baker?assertion=" + hostedURL
+    print("Baking badge at " + getURL)
+
+    r = requests.get(getURL, stream=True)
+    if(r.status_code == 200):
+        print("Baking badge... %s" % filename)
+        with open(filename, 'wb') as f:
+            for chunk in r.iter_content(1024):
+                f.write(chunk)
+    else:
+        print("Something went wrong...")
+        print(r.status_code)
+        print(r.text)
+
 
 def check_for_task(db, badgename, username, appname):
     return db.tasks.find_one({"user": username, "badge": badgename, "app": appname})
@@ -237,14 +277,7 @@ def check_task_datetime(db, task):
 
 ## badge bake utility
 
-## Task Name
-## Badge to assign
-## User
-## Task type
-    # percent
-        # unique circuit or such
 
-## Due Date
 
 
 def sanitize(username):
@@ -269,7 +302,7 @@ def establish_criteria(badgename, criteria):
     criteria_file = open("/home/ubuntu/pythonproject/criteria/" + badgename + ".html", 'w')
     criteria_file.write(criteria)
     criteria_file.close()
-    return "http://www.pcrhero.org:8000/criteria/" + badgename + ".html"
+    return HOSTIP + "criteria/" + badgename + ".html"
 
 
 def get_db(dbname):
@@ -312,6 +345,7 @@ def add_person_request(db):
     add_person(db, personObj.output())
 
 def menu(db):
+    ''' used to test functions without using the main server file. deprecated, but has its uses'''
     command = input("Please choose an option (A)dd, (F)ind, (B)adge Utilities, (Q)uit: ")
     if(command == "A" or command == 'a'):
         add_person_request(db)
@@ -378,6 +412,7 @@ def find_issuer(db, issuername):
     return db.issuers.find_one(entry)
 
 def main():
+    '''deprecated now that the site seems to work, but useful if testing utilities'''
     db = get_db("pcrhero")
     menuFlag = True
     while(menuFlag):

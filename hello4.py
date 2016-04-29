@@ -1,10 +1,21 @@
+###########################################################################################
+# Author: Josh Joseph joshmd@bu.edu
+# 4/29/16
+# This is the main server file for PCR hero....
+
 from bottle import route, run, template, get, post, request, response, redirect, static_file
 import m3
 import os
 
 pcrDB = m3.get_db("pcrhero")
+HASHWORD = 'applesauce'
+HOSTIP = 'http://www.pcrhero.org:8000'
+HOMEDIR = '/home/ubuntu/pythonproject/'
 
-
+###########################################################################################
+### File get path functions -- This section can be cleaned up if all file requests are listed
+### with their appropriate file path after the root directory...  #TODO
+############################################################################################
 
 @get('/static/<filename:path>')
 def static(filename):
@@ -49,6 +60,12 @@ def awardedbadge(filename):
     ##address (or a system link for security purposes) when using on a different host
 
 
+
+##########################################################################################
+#### MAIN ROUTING FUNCTIONS
+##########################################################################################
+
+
 @route('/')
 def home():
     return template('base.tpl', title='PCR Hero', email=request.get_cookie('loggedin', secret='applesauce')) + '''\
@@ -56,6 +73,8 @@ def home():
 </body>
 '''
 
+
+####################### TO DO - put remainder of register logic into a tpl file rather than expanding here
 
 @get('/register')
 def show_registration():
@@ -142,6 +161,10 @@ def show_name():
 </html>
 '''.format(request.POST.name)
 
+
+########## END TODO (reminder, putting this in a tpl will save like ~70 lines of code :)
+
+
 @get('/myprofile')
 def profile():
     if(request.get_cookie('loggedin')):
@@ -157,6 +180,8 @@ def profile():
         '''.format(useremail) + template('profile.tpl', badges=userbadges, apps=applist) + "</body>"
     else:
         redirect("/login")
+
+
 
 @get('/login')
 def show_registration():
@@ -193,6 +218,8 @@ def show_name():
             return template('base.tpl', title='PCR Hero', email=request.get_cookie('loggedin', secret='applesauce')) + "<h2>Hello, {}!<p>Welcome back!</p></h2>".format(request.POST.email)
         else:
             return template('base.tpl', title='PCR Hero', email=request.get_cookie('loggedin', secret='applesauce'))+ "Sorry, something went wrong!"
+
+
 
 @get('/admin-badge')
 def badge_menu():
@@ -471,7 +498,8 @@ def submit():
     # ### Step 3 - evaluate for tasks that need unique submissions or multiple tasks (unique, repeat, timetrial)
     for task in taskarray:
         if(task['type'] == 'unique'):
-            pass ## Working on incorporating this one...
+            pass ## This is the one circuit type that is going to require a little more work
+            ## What is needed is for a mongodb call to $find the {circuit: circuit name} in the 
 
         elif(task['type'] == 'repeat'):
             if(task['circuit'] == submittedcircuit):
@@ -509,17 +537,27 @@ def submit():
                     taskarray.remove(task) ## remove from taskarray
                     print("Task removed...")
 
-                ## else, check if this is an improvement
+                ## else, check if this is an improvement - this will be useful once the tasks badge is implemented
                 if(newScore >= task['score']):
                     m3.update_task_by_id(pcrDB, task['_id'], "score", newScore)
                     print("Score improved! Getting closer!")
 
     ### Step 5 - check cost/performance scores
         elif(task['type'] == 'performance'):
-            pass
+            if(task['circuit'] == submittedcircuit):
+                newScore = reqeust.params.score
+                newCost = request.params.cost
+                    ## check if criteria met...
+                    if(newScore >= task['targetyield']):
+                        if(newCost <= task['cost']):
+                            m3.award_badge_to_user(pcrDB, task['badge'], task['user'])
+                            print("A new badge was awarded to %s!" % task['user'])
+                            m3.remove_task_by_id(pcrDB, task['_id']) ## delete task now that badge has been awarded
+                            taskarray.remove(task) ## remove from taskarray
+                            print("Task removed...")
 
         else:
-            pass
+            pass  ## can always add new task types
 
 @get('/logout')
 def logout():
