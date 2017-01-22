@@ -3,6 +3,8 @@ PCR Hero - Personal Challenge Recognition Software
 
 # <a href="https://www.youtube.com/watch?v=xAlnnOnYW4E">Trailer</a>
 
+PCR Hero is an open-source web application that adds a gaming element to synthetic biology applications, serving as an interface for keeping track of users’ progress and awarding badges as a result. Gamification, or the division of tasks into personal and group challenges, has become a serious business in management and in commercializing software. When tasks are gamified, external goals are set, such as badges or awards, which provide the learner with a tangible sense of progress, and also as an external credential to other team members and colleagues through social media sites. PCR allows administrators (PIs, lab managers) to set external goals (e.g. “permute a set number of designs through such a date,”) as well as challenges to spark creativity and friendly competition within and between research groups.
+
 
 ###Dependencies
 
