@@ -1,4 +1,8 @@
 # EC500 PCR Hero
+PCR Hero - Personal Challenge Recognition Software
+
+# <a href="https://www.youtube.com/watch?v=xAlnnOnYW4E">Trailer</a>
+
 
 ###Dependencies
 
